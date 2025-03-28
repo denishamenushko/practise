@@ -8,8 +8,11 @@
 #include <glm/ext.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
+//#include <array>
+
 #include "Node.hpp"
 #include "Texture.hpp"
+#include "Camera.hpp"
 
 class Model
 {
@@ -35,11 +38,14 @@ protected:
 
 
     Texture createBaseTexture();
+    Texture createLinkTexture(double l);
 
     flecs::world ecs;
     flecs:: system renderMechanism;
     flecs::entity e0;
     flecs::entity e1;
+
+    double scale = 100.0;//коэф масштабирования
 
     double phi; //  угол радианы степень свободы
 

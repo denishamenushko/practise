@@ -18,7 +18,7 @@ private:
     SDL_FRect rect;
     glm::dvec2 pos,size;
 
-    glm::dmat3x3 transform;
+    glm::dmat3 transform;
 
     void updateTransformMatrix();
 };
