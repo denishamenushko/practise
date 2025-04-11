@@ -21,7 +21,7 @@ SDL_AppResult Model::init()
     if (!SDL_CreateWindowAndRenderer(
             "Model"
             , 480, 360
-            , 0
+            , SDL_WINDOW_RESIZABLE
             , &this->window
             , &this->renderer
             )
@@ -55,6 +55,18 @@ SDL_AppResult Model::onKeyDownEvent(SDL_KeyboardEvent &event)
 {
     switch (event.key)
     {
+    case SDLK_B:
+        this->showBase = !this->showBase;
+        if (this->showBase)
+        {
+            this->e0.enable();
+            this->e3.enable();
+        } else {
+
+            this->e0.disable();
+            this->e3.disable();
+        }
+        break;
     case SDLK_SPACE:
         this->phi+=glm::radians(5.0);
         break;
@@ -69,9 +81,15 @@ SDL_AppResult Model::iterate()
     this->clearWindow();
 
     this->solveMechanism();
+
+    this->updateCamera();
+
+    this->updateNodes();
+
     this->ecs.progress();
 
     SDL_RenderPresent(this->renderer);
+
     return SDL_APP_CONTINUE;
 }
 
@@ -91,34 +109,83 @@ void Model::initMechanism()
     this->phi=0.0;
 
     this->p0 = {0.0,0.0};
+    this->p2 = {2.0,0.5};
 
     this->l1=1.0;
-    this->l2=2.0;
-    this->solveMechanism();
+    this->l2=3.5;
+
 
     this->renderMechanism = this->createRenderMechanismSystem();
     this-> e0=this->ecs.entity()
-                   .insert([this](Node &n,Texture &t)
+                   .insert([this](Texture &t)
     {
-        n.position = {100.f, 200.f};
-        n.angle = 0.0;
-        t=this->createBaseTexture();
+        t=this->createBaseTexture(0.2, 0.1);
     });
     this-> e1=this->ecs.entity()
-                   .insert([this](Node &n,Texture &t)
+                   .insert([this](Texture &t)
                            {
-                               n.position = {100.f, 200.f};
-                               n.angle = 0.0;
                                t=this->createLinkTexture(this->l1);
                            });
-
+    this-> e2=this->ecs.entity()
+                   .insert([this](Texture &t)
+                           {
+                               t=this->createLinkTexture(this->l2);
+                           });
+    this-> e3=this->ecs.entity()
+                     .insert([this](Texture &t)
+                             {
+                                 t=this->createBaseTexture(0.2,0.1);
+                             });
     SDL_Log("[Model::initMechanism] The mechanism has been initialized");
 }
 
 void Model::solveMechanism()
 {
+    this-> a1 = phi;
     this->p1={this->l1,0.0};
-    this->p1=glm::rotate(this->p1,this->phi);
+    this->p1=glm::rotate(this->p1,this->a1);
+    this->p1 = this->p0+this->p1;
+    //this->a2 = -glm::asin(this->l1/this->l2 * glm::sin(a1));
+    //this -> a2 = -glm::asin((glm::sin(this->a1)*this->l1)/(glm::sqrt(this->l1*this->l1 + 4 -2 * this->l1 * 2 * glm::cos(this->a1))));
+    this -> a2 = -glm::atan2(
+        this->l1 * glm::sin(this->a1) - this->p2.y,
+        this->p2.x - this->l1 * glm::cos(this->a1));
+}
+
+void Model::updateCamera()
+{
+    int w,h;
+    if(!SDL_GetWindowSize(this->window,&w,&h))
+    {
+        SDL_Log("Couldnt get window size: %s", SDL_GetError());
+        return;
+    }
+    SDL_FRect rect= {
+        0.0f,0.0f,
+        static_cast<float>(w),
+        static_cast<float>(h)};
+    this->camera.setRendererRect(rect);
+    glm::dvec2 pos = {-1.0,-2.0};
+    glm::dvec2 size = {
+        static_cast<double>(w)/this->scale,
+        static_cast<double>(h)/this->scale
+    };
+    this->camera.setSceneRect(pos,size);
+}
+
+void Model::updateNodes()
+{
+    this->e0.set<Node>(this->camera.toRendererNode(
+        this->p0));
+    this->e1.set<Node>(this->camera.toRendererNode(
+        this->p0,
+        this->a1));
+    this->e2.set<Node>(this->camera.toRendererNode(
+        this->p1,
+        this->a2));
+    this->e3.set<Node>(this->camera.toRendererNode(
+        this->p2));
+
 }
 
 flecs::system Model::createRenderMechanismSystem()
@@ -156,10 +223,29 @@ flecs::system Model::createRenderMechanismSystem()
 
 }
 
-Texture Model::createBaseTexture()
+Texture Model::createBaseTexture(double w, double h)
 {
     Texture result;
-    result.rect = {0.0f,0.0f,100.0f,100.0f};
+
+    Camera camera;
+
+    glm::dvec2 pos = {-w / 2.0 -1.0, -h -1.0};
+    glm::dvec2 size ={w+2.0,h+2.0};
+
+    camera.setSceneRect(pos,size);
+
+    result.center = {
+        static_cast<float>(-pos.x * this->scale),
+        static_cast<float>(-pos.y * this->scale)
+    };
+    result.rect = {
+        0.0f, 0.0f,
+        static_cast<float>(size.x * this->scale),
+        static_cast<float>(size.y * this->scale)
+    };
+
+    camera.setRendererRect(result.rect);
+
 
     SDL_Surface* surface = SDL_CreateSurface(
         static_cast<int>(result.rect.w),//Ширина
@@ -170,9 +256,10 @@ Texture Model::createBaseTexture()
         SDL_CreateSoftwareRenderer(surface);
 
     SDL_FPoint base[4];
-    result.center = base[0] = base[3] = {50.f, 50.f};
-    base[1] = {10.f, 90.f};
-    base[2] = {90.f, 90.f};
+    result.center = base[0] = base[3] =
+        camera.toRenderer({0.0, 0.0});
+    base[1] = camera.toRenderer({-w/2.0f, -h});
+    base[2] = camera.toRenderer({w/2.0f, -h});
 
     SDL_SetRenderDrawColorFloat(
         renderer
@@ -210,7 +297,7 @@ Texture Model::createLinkTexture(double l)
         static_cast<float>(-pos.x * this->scale),
         static_cast<float>(-pos.y * this->scale)
 };
-    SDL_FRect rect = {
+    result.rect = {
         0.0f, 0.0f,
         static_cast<float>(size.x * this->scale),
         static_cast<float>(size.y * this->scale)

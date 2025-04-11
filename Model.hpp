@@ -32,27 +32,36 @@ protected:
     void clearWindow();
     void initMechanism();
     void solveMechanism();
+    void updateCamera();
+    void updateNodes();
 
     // void renderMechanism();
     flecs::system createRenderMechanismSystem();
 
 
-    Texture createBaseTexture();
+    Texture createBaseTexture(double w, double h);
     Texture createLinkTexture(double l);
 
     flecs::world ecs;
     flecs:: system renderMechanism;
     flecs::entity e0;
-    flecs::entity e1;
+    flecs::entity e1,e2, e3;
 
     double scale = 100.0;//коэф масштабирования
+
+    Camera camera;
 
     double phi; //  угол радианы степень свободы
 
     double l1; //длина 1 звена, м
+    double a1; // угол поворота звена 1 рад
     double l2; //длина 2 звена, м
-    glm::dvec2 p0;
+    double a2; // угол поворота звена 2 рад
+
+    glm::dvec2 p0;// база
 
     glm::dvec2 p1, p2;
+
+    bool showBase = true;
 
 };
