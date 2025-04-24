@@ -40,10 +40,11 @@ protected:
 
     Texture createBaseTexture(double w, double h);
     Texture createLinkTexture(double l);
+    Texture createRectangleTexture(double w, double h);
 
     flecs::world ecs;
     flecs::system renderMechanism;
-    flecs::entity e0, e1, e2, e3, e4, e5, e6, e7;
+    flecs::entity e0, e1, e2, e3, e4, e5, e6, e7, e8;
 
     double scale = 100.0;
 

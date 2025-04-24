@@ -164,6 +164,11 @@ void Model::initMechanism()
                            {
                                t = this->createLinkTexture(this->l5);
                            });
+    this->e8 = this->ecs.entity()
+                   .insert([this](Texture &t)
+                           {
+                               t = this->createRectangleTexture(0.6,0.4);
+                           });
 }
 
 void Model::solveMechanism()
@@ -221,6 +226,10 @@ void Model::updateNodes()
         ));
     this->e7.set<Node>(this->camera.toRendererNode(
         this->p5,
+        this->a5
+        ));
+    this->e8.set<Node>(this->camera.toRendererNode(
+        this->p6,
         this->a5
         ));
 }
@@ -374,6 +383,63 @@ Texture Model::createLinkTexture(double l)
         renderer
         , link.data()
         , link.size()
+        );
+    SDL_RenderPresent(renderer);
+
+    result.texture =
+        SDL_CreateTextureFromSurface(
+            this->renderer
+            , surface);
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroySurface(surface);
+
+    return result;
+}
+
+Texture Model::createRectangleTexture(double w,double h)
+{
+    Texture result;
+
+    Camera camera;
+    glm::dvec2 pos =  {0.0, 0.0};
+    glm::dvec2 size = {w, h};
+    camera.setSceneRect(pos, size);
+
+    result.center = {
+        static_cast <float>(size.x/2. * this->scale),
+         static_cast <float>(size.y/2. * this->scale)
+    };
+    result.rect = {
+        0.0f, 0.0f,
+        static_cast<float>(size.x * this->scale),
+        static_cast<float>(size.y * this->scale)
+    };
+    camera.setRendererRect(result.rect);
+    std::array<SDL_FPoint, 5> dot;
+    dot[0] = camera.toRenderer({0.01       , .01  });
+    dot[1] = camera.toRenderer({size.x-.01, .01   });
+    dot[2] = camera.toRenderer({size.x-.01, size.y-0.01});
+    dot[3] = camera.toRenderer({0.01       , size.y-0.01});
+    dot[4] = camera.toRenderer({0.01       , .01   });
+
+    SDL_Surface *surface = SDL_CreateSurface(
+        static_cast<int>(result.rect.w) // Ширина
+        , static_cast<int>(result.rect.h) // Высота
+        , SDL_PIXELFORMAT_RGBA32
+        );
+    SDL_Renderer *renderer =
+        SDL_CreateSoftwareRenderer(surface);
+
+    SDL_SetRenderDrawColorFloat(
+        renderer
+        , 0.0f, 0.0f, 0.0f
+        , SDL_ALPHA_OPAQUE_FLOAT
+        );
+    SDL_RenderLines(
+        renderer
+        , dot.data()
+        , dot.size()
         );
     SDL_RenderPresent(renderer);
 

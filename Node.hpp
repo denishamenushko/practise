@@ -6,5 +6,4 @@ struct Node
 {
     SDL_FPoint position;
     double angle;
-    SDL_FPoint final;
 };
