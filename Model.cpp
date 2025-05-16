@@ -63,14 +63,36 @@ SDL_AppResult Model::onKeyDownEvent(SDL_KeyboardEvent &event)
         {
             this->e0.enable();
             this->e3.enable();
+            this->e5.enable();
         } else {
             this->e0.disable();
             this->e3.disable();
+            this->e5.disable();
         }
         break;
     case SDLK_SPACE:
         this->phi += glm::radians(5.0);
         break;
+    case SDLK_T://t1,tm2, t3,t4,tm4, t7
+        this->showTrajectories = !this->showTrajectories;
+        if (this->showTrajectories)
+        {
+            this->et1.enable();
+            this->et3.enable();
+            this->et4.enable();
+            this->et7.enable();
+            this->em2.enable();
+            this->em4.enable();
+        } else {
+            this->et1.disable();
+            this->et3.disable();
+            this->et4.disable();
+            this->et7.disable();
+            this->em2.disable();
+            this->em4.disable();
+        }
+        break;
+
     default:
         break;
     }
@@ -118,6 +140,9 @@ void Model::initMechanism()
     this->l3 = 2.0;
     this->l4 = 2.0;
     this->l5 = 5.0;
+
+    this->calculateTrajectories();
+
     this->renderMechanism = this->createRenderMechaismSystem();
 
     this->e0 = this->ecs.entity()
@@ -132,11 +157,22 @@ void Model::initMechanism()
             t = this->createLinkTexture(this->l1);
         });
 
+    this->et1 = this->ecs.entity()
+                    .insert([this](Texture &t)
+                            {
+                                t = this->createTrajectoryTexture(this->t1);
+                            });
+
     this->e2 = this->ecs.entity()
         .insert([this](Texture &t)
         {
             t = this->createLinkTexture(this->l2);
         });
+    this->em2 = this->ecs.entity()
+                    .insert([this](Texture &t)
+                            {
+                                t = this->createMassTrajectoryTexture(this->tm2);
+                            });
 
     this->e3 = this->ecs.entity()
         .insert([this](Texture &t)
@@ -144,11 +180,27 @@ void Model::initMechanism()
             t = this->createBaseTexture(0.4, 0.2);
         });
 
+    this->et3 = this->ecs.entity()
+                    .insert([this](Texture &t)
+                            {
+                                t = this->createTrajectoryTexture(this->t3);
+                            });
+
     this->e4 = this->ecs.entity()
                    .insert([this](Texture &t)
                            {
                                t = this->createLinkTexture(this->l3);
                            });
+    this->et4 = this->ecs.entity()
+                    .insert([this](Texture &t)
+                            {
+                                t = this->createTrajectoryTexture(this->t4);
+                            });
+    this->em4 = this->ecs.entity()
+                    .insert([this](Texture &t)
+                            {
+                                t = this->createMassTrajectoryTexture(this->tm4);
+                            });
     this->e5 = this->ecs.entity()
                    .insert([this](Texture &t)
                            {
@@ -164,6 +216,11 @@ void Model::initMechanism()
                            {
                                t = this->createLinkTexture(this->l5);
                            });
+    this->et7 = this->ecs.entity()
+                    .insert([this](Texture &t)
+                            {
+                                t = this->createTrajectoryTexture(this->t7);
+                            });
     this->e8 = this->ecs.entity()
                    .insert([this](Texture &t)
                            {
@@ -171,30 +228,68 @@ void Model::initMechanism()
                            });
 }
 
+void Model::calculateTrajectories()
+{
+    auto currentPhi = this->phi;
+
+    this->t1.clear();
+    this->tm2.clear();
+    this->t3.clear();
+    this->t4.clear();
+    this->tm4.clear();
+    this->t7.clear();
+
+    auto n = 360 / 5;
+    auto a = glm::pi<double>() / n * 2;
+    for (int i = 0; i <= n; ++i)
+    {
+        this->phi = a * i;
+        this->solveMechanism();
+        this->t1.push_back(this->p1);
+        this->tm2.push_back(this->s2);//////////////////////////
+        this->t3.push_back(this->p3);
+        this->t4.push_back(this->p6);
+        this->tm4.push_back(this->s4);/////////////////////////////
+        this->t7.push_back(this->p7);
+    }
+
+    this->phi = currentPhi;
+}
+
+
 void Model::solveMechanism()
 {
     this->a1 = phi;
 
     this->p1 = {this->l1, 0.0};
     this->p1 = glm::rotate(this->p1, this->a1);
-    this->p1 = this->p0 + this->p1;
+    this->p1 = this->p0 + this->p1; //t1 point A
 
     this->a2 =glm::atan2(-glm::sin(this->a1),2-glm::cos(this->a1))
                +glm::acos((1+4+4-4-2*2*glm::cos(this->a1))/(2*2*sqrt(1+4-2*2*glm::cos(this->a1))));
     this->a3=glm::atan2(this->p2.y-this->p3.y,this->p2.x-this->p3.x);
     this->p3 = {this->l2, 0.0};
     this->p3 = glm::rotate(this->p3, this->a2);
-    this->p3 = this->p1 + this->p3;//это точка B на моей схеме
+    this->p3 = this->p1 + this->p3;//это точка B на моей схеме t3
 
     this->a4 = (this->a2)+1.57;
     this->p6 = {this->l2, 0.0};
     this->p6 = glm::rotate(this->p6, this->a4);
-    this->p6 = this->p1 + this->p6;//точка Е
+    this->p6 = this->p1 + this->p6;//точка Е t4
+
+    this->s2 = {(this->l1)/2, 0.0};
+    this->s2 = glm::rotate(this->s2, this->a4);
+    this->s2 = this->p1 + this->s2;//точка Е t4
 
     this->a5 = glm::atan(this->p6.y-this->p5.y,this->p6.x-this->p5.x);
 
+    this->p7 = {this->l5, 0.0};
+    this->p7 = glm::rotate(this->p7, this->a5);
+    this->p7 = this->p5 + this->p7;
 
-
+    this->s4 = {this->l1, 0.0};
+    this->s4 = glm::rotate(this->s4, this->a5);
+    this->s4 = this->p5 + this->s4;
 }
 
 void Model::updateNodes()
@@ -206,16 +301,30 @@ void Model::updateNodes()
         this->p0,
         this->a1
     ));
+    this->et1.set<Node>(this->camera.toRendererNode(
+        this->p0));
     this->e2.set<Node>(this->camera.toRendererNode(
         this->p1,
         this->a2
     ));
+    this->em2.set<Node>(this->camera.toRendererNode(
+        this->p0));
     this->e3.set<Node>(this->camera.toRendererNode(
         this->p2
     ));
+    this->et3.set<Node>(this->camera.toRendererNode(
+        this->p0
+        ));
+
     this->e4.set<Node>(this->camera.toRendererNode(
         this->p3,
         this->a3
+        ));
+    this->et4.set<Node>(this->camera.toRendererNode(
+        this->p0
+        ));
+    this->em4.set<Node>(this->camera.toRendererNode(
+        this->p0
         ));
     this->e5.set<Node>(this->camera.toRendererNode(
         this->p5
@@ -227,6 +336,9 @@ void Model::updateNodes()
     this->e7.set<Node>(this->camera.toRendererNode(
         this->p5,
         this->a5
+        ));
+    this->et7.set<Node>(this->camera.toRendererNode(
+        this->p0
         ));
     this->e8.set<Node>(this->camera.toRendererNode(
         this->p6,
@@ -440,6 +552,139 @@ Texture Model::createRectangleTexture(double w,double h)
         renderer
         , dot.data()
         , dot.size()
+        );
+    SDL_RenderPresent(renderer);
+
+    result.texture =
+        SDL_CreateTextureFromSurface(
+            this->renderer
+            , surface);
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroySurface(surface);
+
+    return result;
+}
+Texture Model::createTrajectoryTexture(const std::vector<glm::dvec2> &t)
+{
+    Texture result;
+
+    double xMin, xMax, yMin, yMax;
+    xMin = xMax = t[0].x;
+    yMin = yMax = t[0].y;
+    for (auto& p : t)
+    {
+        if (p.x < xMin) xMin = p.x;
+        if (p.x > xMax) xMax = p.x;
+        if (p.y < yMin) yMin = p.y;
+        if (p.y > yMax) yMax = p.y;
+    }
+
+    Camera camera;
+    glm::dvec2 pos = {xMin - 1.0, yMin - 1.0};
+    glm::dvec2 size = {xMax - xMin + 2.0,
+                       yMax - yMin + 2.0};
+    camera.setSceneRect(pos, size);
+
+    result.center = {
+        static_cast<float>((p0.x - xMin + 1.0 ) * this->scale),
+        static_cast<float>((yMax + 1.0 - p0.y) * this->scale)
+    };
+    result.rect = {
+        0.0f, 0.0f,
+        static_cast<float>(size.x * this->scale),
+        static_cast<float>(size.y * this->scale)
+    };
+    camera.setRendererRect(result.rect);
+
+    std::vector<SDL_FPoint> traj;
+    for (auto& p : t)
+        traj.push_back(camera.toRenderer(p));
+
+    SDL_Surface *surface = SDL_CreateSurface(
+        static_cast<int>(result.rect.w) // Ширина
+        , static_cast<int>(result.rect.h) // Высота
+        , SDL_PIXELFORMAT_RGBA32
+        );
+    SDL_Renderer *renderer =
+        SDL_CreateSoftwareRenderer(surface);
+
+    SDL_SetRenderDrawColorFloat(
+        renderer
+        , 1.0f, 0.0f, 0.0f
+        , SDL_ALPHA_OPAQUE_FLOAT
+        );
+    SDL_RenderLines(
+        renderer
+        , traj.data()
+        , traj.size()
+        );
+    SDL_RenderPresent(renderer);
+
+    result.texture =
+        SDL_CreateTextureFromSurface(
+            this->renderer
+            , surface);
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroySurface(surface);
+
+    return result;
+}
+
+Texture Model::createMassTrajectoryTexture(const std::vector<glm::dvec2> &t)
+{
+    Texture result;
+
+    double xMin, xMax, yMin, yMax;
+    xMin = xMax = t[0].x;
+    yMin = yMax = t[0].y;
+    for (auto& p : t)
+    {
+        if (p.x < xMin) xMin = p.x;
+        if (p.x > xMax) xMax = p.x;
+        if (p.y < yMin) yMin = p.y;
+        if (p.y > yMax) yMax = p.y;
+    }
+
+    Camera camera;
+    glm::dvec2 pos = {xMin - 1.0, yMin - 1.0};
+    glm::dvec2 size = {xMax - xMin + 2.0,
+                       yMax - yMin + 2.0};
+    camera.setSceneRect(pos, size);
+
+    result.center = {
+        static_cast<float>((p0.x - xMin + 1.0 ) * this->scale),
+        static_cast<float>((yMax + 1.0 - p0.y) * this->scale)
+    };
+    result.rect = {
+        0.0f, 0.0f,
+        static_cast<float>(size.x * this->scale),
+        static_cast<float>(size.y * this->scale)
+    };
+    camera.setRendererRect(result.rect);
+
+    std::vector<SDL_FPoint> traj;
+    for (auto& p : t)
+        traj.push_back(camera.toRenderer(p));
+
+    SDL_Surface *surface = SDL_CreateSurface(
+        static_cast<int>(result.rect.w) // Ширина
+        , static_cast<int>(result.rect.h) // Высота
+        , SDL_PIXELFORMAT_RGBA32
+        );
+    SDL_Renderer *renderer =
+        SDL_CreateSoftwareRenderer(surface);
+
+    SDL_SetRenderDrawColorFloat(
+        renderer
+        , 0.0f, 0.0f, 1.0f
+        , SDL_ALPHA_OPAQUE_FLOAT
+        );
+    SDL_RenderLines(
+        renderer
+        , traj.data()
+        , traj.size()
         );
     SDL_RenderPresent(renderer);
 

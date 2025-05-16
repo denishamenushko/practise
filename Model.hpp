@@ -9,6 +9,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 
 #include <array>
+#include <vector>
 
 #include "Node.hpp"
 #include "Texture.hpp"
@@ -33,6 +34,7 @@ protected:
 
     void initMechanism();
     void solveMechanism();
+    void calculateTrajectories();
     void updateCamera();
     void updateNodes();
 
@@ -41,10 +43,12 @@ protected:
     Texture createBaseTexture(double w, double h);
     Texture createLinkTexture(double l);
     Texture createRectangleTexture(double w, double h);
+    Texture createTrajectoryTexture(const std::vector<glm::dvec2>& t);
+    Texture createMassTrajectoryTexture(const std::vector<glm::dvec2> &t);
 
     flecs::world ecs;
     flecs::system renderMechanism;
-    flecs::entity e0, e1, e2, e3, e4, e5, e6, e7, e8;
+    flecs::entity e0, e1, et1, e2, em2, e3, et3, e4, et4, em4, e5, e6, e7,et7, e8;
 
     double scale = 100.0;
 
@@ -70,7 +74,10 @@ protected:
     double a5; // Угол поворота звена , рад
 
 
-    glm::dvec2 p1, p2, p3, p4, p5, p6;
+    glm::dvec2 p1, p2, p3, p4, p5, p6, p7, s2,s4;
+
+    std::vector<glm::dvec2> t1,tm2, t3,t4,tm4, t7;
 
     bool showBase = true;
+    bool showTrajectories = true;
 };
